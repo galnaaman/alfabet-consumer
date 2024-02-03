@@ -2,7 +2,10 @@ import pika
 import json
 import os
 
-RABBITMQ_HOST = 'localhost'
+RABBITMQ_HOST = os.environ.get('RABBITMQ_HOST', 'localhost')
+RABBITMQ_PORT = os.environ.get('RABBITMQ_PORT', 5672)
+RABBITMQ_USERNAME = os.environ.get('RABBITMQ_USERNAME', 'guest')
+RABBITMQ_PASSWORD = os.environ.get('RABBITMQ_PASSWORD', 'guest')
 RABBITMQ_QUEUE = 'event_notifications'
 
 
@@ -12,14 +15,16 @@ def callback(ch, method, properties, body):
     for participant in data['participants']:
         print(f"Sending reminder to {participant}")
         # ----------------- Send email to participant -----------------
-        # ----------------- use email service logic -----------------
+        # ----------------- use email service logic or API -----------------
 
     print(f"Sent reminder for event '{data['event_name']}' to {len(data['participants'])} participants.")
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
-def main():
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+def consumer():
+    credentials = pika.PlainCredentials(RABBITMQ_USERNAME, RABBITMQ_PASSWORD)
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host=RABBITMQ_HOST, port=RABBITMQ_PORT, credentials=credentials))
     channel = connection.channel()
 
     channel.queue_declare(queue=RABBITMQ_QUEUE, durable=True)
@@ -30,4 +35,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    consumer()
